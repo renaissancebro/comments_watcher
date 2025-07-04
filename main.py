@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 # 📌 CONFIG
 load_dotenv()
 API_KEY = os.getenv("API_KEY", "DEMO_KEY")  # Replace with your own api.data.gov key for production
+
+# Debug: Let's see what API key is being loaded
+print(f"🔑 API Key loaded: {API_KEY[:10]}..." if len(API_KEY) > 10 else f"🔑 API Key loaded: {API_KEY}")
+print(f"📁 Current working directory: {os.getcwd()}")
+print(f"📄 .env file exists: {os.path.exists('.env')}")
+
 BASE_URL = "https://api.regulations.gov/v4/comments"
 KEYWORDS = ["pesticide", "glyphosate", "worker safety"]
 
@@ -16,11 +22,21 @@ def request_comments(since_date=None, page_size=20):
         "page[size]": page_size,
         "sort": "lastModifiedDate",
     }
-    if since_date:
-        params["filter[lastModifiedDate][ge]"] = since_date
+    # Temporarily remove date filter to test API connection
+    # if since_date:
+    #     params["filter[lastModifiedDate][ge]"] = since_date
     headers = {"X-Api-Key": API_KEY}
+
+    print(f"🌐 Making request to: {BASE_URL}")
+    print(f"📋 Parameters: {params}")
+
     resp = requests.get(BASE_URL, params=params, headers=headers)
-    resp.raise_for_status()
+
+    if resp.status_code != 200:
+        print(f"❌ API Error: {resp.status_code}")
+        print(f"📄 Response: {resp.text}")
+        resp.raise_for_status()
+
     return resp.json()["data"]
 
 # 🔍 STEP 2: Keyword scan on metadata snippet/title
@@ -87,7 +103,8 @@ def save_flagged_comments(comments, filename="flagged_comments.json"):
 
 # 🧪 MAIN DEMO FLOW
 if __name__ == "__main__":
-    metadata = request_comments(since_date="2025-07-01")  # adjust as needed
+    # Use a more recent date or no date filter for testing
+    metadata = request_comments(since_date=None)  # Get recent comments without date filter
     flagged = keyword_search(metadata)
     relevant = review_comments(flagged)
     send_alert(relevant)
