@@ -1,6 +1,6 @@
 # Comment Watcher
 
-A modular Python application for monitoring regulations.gov comments for specific keywords.
+A modular Python application for monitoring regulations.gov comments for specific keywords with Teams and email webhook notifications.
 
 ## 🏗️ Architecture
 
@@ -9,10 +9,12 @@ The application is structured with clear separation of concerns:
 - **`config.py`** - Configuration management and environment variables
 - **`fetcher.py`** - Regulations.gov API interactions
 - **`filter.py`** - Keyword matching logic
-- **`notifier.py`** - Alert formatting and output
+- **`notifier.py`** - Alert formatting and webhook notifications
 - **`storage.py`** - SQLite database management
 - **`main.py`** - Orchestration logic
 - **`db_utils.py`** - Database query and management utilities
+- **`test_notifications.py`** - Test webhook notifications
+- **`test_webhook_server.py`** - Local webhook server for testing
 
 ## 📋 Module Functions
 
@@ -28,9 +30,13 @@ The application is structured with clear separation of concerns:
 
 ### `notifier.py`
 
-- `format_alert(comment)` → returns formatted string
-- `send_alert(formatted_message)` → currently just print(), later could email or Teams
-- `send_alerts(comments)` → sends alerts for multiple comments
+- `format_alert(comment)` → returns formatted console string
+- `format_teams_message(comment)` → returns Teams message card
+- `format_email_message(comment)` → returns email message
+- `send_teams_alert(comment)` → sends Teams webhook
+- `send_email_alert(comment)` → sends email webhook
+- `send_alerts(comments)` → sends all notification types
+- `test_notifications()` → tests all notification systems
 
 ### `storage.py`
 
@@ -64,12 +70,36 @@ The application uses SQLite for data storage with two main tables:
 - Prevents duplicate processing of the same comments
 - Includes timestamps for when IDs were marked as seen
 
+## 🔔 Notification System
+
+The application supports multiple notification channels:
+
+### Microsoft Teams
+
+- Rich message cards with comment details
+- Direct links to regulations.gov comments
+- Configurable webhook URL
+- Includes keyword, title, submitter, and organization
+
+### Email Webhooks
+
+- Plain text and HTML email formats
+- Configurable webhook URL for email services
+- Includes all comment metadata and direct links
+- Compatible with Zapier, IFTTT, or custom email services
+
+### Console Output
+
+- Detailed console logging for all alerts
+- Includes comment links and full metadata
+- Progress tracking and summary statistics
+
 ## 🚀 Quick Start
 
 1. **Install dependencies:**
 
    ```bash
-   pip install requests python-dotenv
+   pip install requests python-dotenv flask
    ```
 
 2. **Set up your API key:**
@@ -79,7 +109,19 @@ The application uses SQLite for data storage with two main tables:
    API_KEY=your_regulations_gov_api_key_here
    ```
 
-3. **Run the watcher:**
+3. **Configure notifications (optional):**
+
+   ```
+   # Teams notifications
+   TEAMS_WEBHOOK_URL=https://your-org.webhook.office.com/webhookb2/...
+   ENABLE_TEAMS_ALERTS=true
+
+   # Email notifications
+   EMAIL_WEBHOOK_URL=https://your-email-service.com/webhook
+   ENABLE_EMAIL_ALERTS=true
+   ```
+
+4. **Run the watcher:**
    ```bash
    python main.py
    ```
@@ -130,6 +172,23 @@ python db_utils.py export
 python db_utils.py clear
 ```
 
+### Testing Notifications
+
+```bash
+# Test all notification systems
+python test_notifications.py
+```
+
+### Local Webhook Testing
+
+```bash
+# Start local webhook server
+python test_webhook_server.py
+
+# In another terminal, set EMAIL_WEBHOOK_URL=http://localhost:5000/webhook
+# Then run the test script
+```
+
 ## ⚙️ Configuration
 
 Edit `config.py` to customize:
@@ -138,6 +197,7 @@ Edit `config.py` to customize:
 - **Page size**: Number of comments to check per run
 - **Request delay**: Time between API requests
 - **Database file**: SQLite database filename
+- **Notification settings**: Teams and email webhook URLs
 
 ## 🔧 Key Features
 
@@ -147,6 +207,13 @@ Edit `config.py` to customize:
 - **Fast queries**: Indexed lookups for efficient searching
 - **No duplicates**: Primary key constraints prevent duplicate entries
 - **Rich metadata**: Stores full comment details and timestamps
+
+### Webhook Notifications
+
+- **Teams integration**: Rich message cards with direct links
+- **Email support**: Plain text and HTML email formats
+- **Configurable**: Enable/disable individual notification types
+- **Error handling**: Graceful failure handling for webhook errors
 
 ### Duplicate Prevention
 
@@ -180,20 +247,26 @@ The `db_utils.py` script provides command-line tools for:
 - **Exporting**: Convert database data to JSON format
 - **Management**: Clear database or view recent entries
 
-## 📊 Output
-
-The application provides:
-
-- Real-time alerts for keyword matches
-- Detailed comment information (title, date, submitter, etc.)
-- Summary statistics
-- Persistent SQLite storage with query capabilities
-- Duplicate prevention with seen IDs tracking
-- Export functionality for data analysis
-
 ## 🧪 Testing
 
-Run the main script to see the monitoring in action:
+### Test Notifications
+
+```bash
+# Test all notification systems
+python test_notifications.py
+```
+
+### Local Webhook Testing
+
+```bash
+# Start local webhook server
+python test_webhook_server.py
+
+# In another terminal, set EMAIL_WEBHOOK_URL=http://localhost:5000/webhook
+# Then run the test script
+```
+
+### Run Main Application
 
 ```bash
 python main.py
