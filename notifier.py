@@ -1,65 +1,72 @@
 from typing import List, Dict
 
-class Notifier:
-    """Handles alerting and notification output."""
+def format_alert(comment: Dict) -> str:
+    """
+    Format a comment into an alert message.
 
-    def __init__(self):
-        pass
+    Args:
+        comment: Comment dictionary with processed data
 
-    def send_alert(self, comments: List[Dict]) -> None:
-        """
-        Send alerts for flagged comments.
+    Returns:
+        Formatted alert string
+    """
+    msg = (
+        f"🔔 MATCH: '{comment['keyword']}'\n"
+        f"📋 ID: {comment['id']}\n"
+        f"📅 Date: {comment['date']}\n"
+        f"📝 Title: {comment['title']}\n"
+        f"👤 Submitter: {comment.get('submitter_name', 'N/A')}\n"
+        f"🏢 Organization: {comment.get('organization', 'N/A')}\n"
+        f"📄 Snippet: {comment['text_snippet']}\n"
+        "—" * 60
+    )
+    return msg
 
-        Args:
-            comments: List of flagged comment dictionaries
-        """
-        if not comments:
-            print("✅ No flagged comments this run.")
-            return
+def send_alert(formatted_message: str) -> None:
+    """
+    Send an alert (currently just prints, but could be extended for email/Teams).
 
-        print(f"🚨 Found {len(comments)} flagged comments!")
-        print("=" * 60)
+    Args:
+        formatted_message: The formatted alert message to send
+    """
+    print(formatted_message)
 
-        for comment in comments:
-            self._print_comment_alert(comment)
+def send_alerts(comments: List[Dict]) -> None:
+    """
+    Send alerts for multiple flagged comments.
 
-    def _print_comment_alert(self, comment: Dict) -> None:
-        """
-        Print formatted alert for a single comment.
+    Args:
+        comments: List of flagged comment dictionaries
+    """
+    if not comments:
+        print("✅ No flagged comments this run.")
+        return
 
-        Args:
-            comment: Comment dictionary
-        """
-        msg = (
-            f"🔔 MATCH: '{comment['keyword']}'\n"
-            f"📋 ID: {comment['id']}\n"
-            f"📅 Date: {comment['date']}\n"
-            f"📝 Title: {comment['title']}\n"
-            f"👤 Submitter: {comment.get('submitter_name', 'N/A')}\n"
-            f"🏢 Organization: {comment.get('organization', 'N/A')}\n"
-            f"📄 Snippet: {comment['text_snippet']}\n"
-            "—" * 60
-        )
-        print(msg)
+    print(f"🚨 Found {len(comments)} flagged comments!")
+    print("=" * 60)
 
-    def print_summary(self, total_checked: int, flagged_count: int) -> None:
-        """
-        Print a summary of the monitoring run.
+    for comment in comments:
+        formatted_msg = format_alert(comment)
+        send_alert(formatted_msg)
 
-        Args:
-            total_checked: Total number of comments checked
-            flagged_count: Number of comments flagged
-        """
-        print(f"\n📊 SUMMARY:")
-        print(f"   Comments checked: {total_checked}")
-        print(f"   Comments flagged: {flagged_count}")
-        print(f"   Flag rate: {(flagged_count/total_checked*100):.1f}%" if total_checked > 0 else "   Flag rate: 0%")
+def print_summary(total_checked: int, flagged_count: int) -> None:
+    """
+    Print a summary of the monitoring run.
 
-    def print_keywords(self, keywords: List[str]) -> None:
-        """
-        Print the keywords being monitored.
+    Args:
+        total_checked: Total number of comments checked
+        flagged_count: Number of comments flagged
+    """
+    print(f"\n📊 SUMMARY:")
+    print(f"   Comments checked: {total_checked}")
+    print(f"   Comments flagged: {flagged_count}")
+    print(f"   Flag rate: {(flagged_count/total_checked*100):.1f}%" if total_checked > 0 else "   Flag rate: 0%")
 
-        Args:
-            keywords: List of keywords being searched
-        """
-        print(f"🔍 Monitoring for keywords: {', '.join(keywords)}")
+def print_keywords(keywords: List[str]) -> None:
+    """
+    Print the keywords being monitored.
+
+    Args:
+        keywords: List of keywords being searched
+    """
+    print(f"🔍 Monitoring for keywords: {', '.join(keywords)}")

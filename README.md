@@ -4,15 +4,65 @@ A modular Python application for monitoring regulations.gov comments for specifi
 
 ## 🏗️ Architecture
 
-The application is built with separated concerns:
+The application is structured with clear separation of concerns:
 
 - **`config.py`** - Configuration management and environment variables
-- **`api_client.py`** - HTTP client for regulations.gov API
-- **`comment_analyzer.py`** - Keyword matching and comment processing
-- **`data_storage.py`** - JSON file storage for flagged comments
+- **`fetcher.py`** - Regulations.gov API interactions
+- **`filter.py`** - Keyword matching logic
 - **`notifier.py`** - Alert formatting and output
-- **`comment_watcher.py`** - Main orchestrator class
-- **`main.py`** - Simple entry point
+- **`storage.py`** - SQLite database management
+- **`main.py`** - Orchestration logic
+- **`db_utils.py`** - Database query and management utilities
+
+## 📋 Module Functions
+
+### `fetcher.py`
+
+- `fetch_metadata(since_date)` → returns list of comment metadata
+- `fetch_comment_detail(comment_id)` → returns full comment content
+
+### `filter.py`
+
+- `flag_by_keyword(metadata_list, keyword_list)` → returns list of (id, keyword) hits
+- `recheck_full_text(full_comment, keyword_list)` → returns True/False or keyword match
+
+### `notifier.py`
+
+- `format_alert(comment)` → returns formatted string
+- `send_alert(formatted_message)` → currently just print(), later could email or Teams
+- `send_alerts(comments)` → sends alerts for multiple comments
+
+### `storage.py`
+
+- `save_flagged_comments(comment_list)` → saves to SQLite database
+- `load_seen_ids()` → loads previously seen comment IDs
+- `mark_as_seen(id)` → marks a comment as seen to avoid duplicates
+- `get_comments_by_keyword(keyword)` → query comments by keyword
+- `get_comments_by_date_range(start, end)` → query comments by date range
+- `get_statistics()` → get database statistics
+- `export_to_json(filename)` → export data to JSON
+
+### `main.py`
+
+- Loads environment variables
+- Sets up keywords
+- Orchestrates the monitoring cycle: fetch → flag → pull detail → notify → save
+
+## 🗄️ SQLite Database
+
+The application uses SQLite for data storage with two main tables:
+
+### `flagged_comments` table
+
+- Stores all flagged comments with full details
+- Includes metadata like title, date, submitter, organization
+- Tracks when comments were added to the database
+
+### `seen_ids` table
+
+- Tracks previously processed comment IDs
+- Prevents duplicate processing of the same comments
+- Includes timestamps for when IDs were marked as seen
 
 ## 🚀 Quick Start
 
@@ -39,32 +89,45 @@ The application is built with separated concerns:
 ### Basic Usage
 
 ```python
-from comment_watcher import CommentWatcher
+from main import run_monitoring_cycle
 
-watcher = CommentWatcher()
-results = watcher.run_monitoring_cycle()
+results = run_monitoring_cycle()
+print(f"Found {results['flagged_count']} flagged comments")
 ```
 
-### Custom Keywords
+### Database Queries
 
 ```python
-from comment_watcher import CommentWatcher
-from comment_analyzer import CommentAnalyzer
+from storage import get_comments_by_keyword, get_statistics
 
-# Create custom analyzer with different keywords
-analyzer = CommentAnalyzer(keywords=["climate", "emissions", "carbon"])
-watcher = CommentWatcher()
-watcher.analyzer = analyzer
+# Get all comments matching a keyword
+pesticide_comments = get_comments_by_keyword("pesticide")
 
-results = watcher.run_monitoring_cycle(page_size=50)
+# Get database statistics
+stats = get_statistics()
+print(f"Total comments: {stats['total_flagged_comments']}")
 ```
 
-### View Historical Data
+### Using Database Utilities
 
-```python
-watcher = CommentWatcher()
-historical = watcher.get_historical_data()
-print(f"Found {len(historical)} historical flagged comments")
+```bash
+# View database statistics
+python db_utils.py stats
+
+# View recent comments
+python db_utils.py recent 5
+
+# Search by keyword
+python db_utils.py keyword pesticide
+
+# Search by date range
+python db_utils.py date 2024-01-01 2024-12-31
+
+# Export to JSON
+python db_utils.py export
+
+# Clear database (use with caution!)
+python db_utils.py clear
 ```
 
 ## ⚙️ Configuration
@@ -74,36 +137,48 @@ Edit `config.py` to customize:
 - **Keywords**: Terms to search for in comments
 - **Page size**: Number of comments to check per run
 - **Request delay**: Time between API requests
-- **Output file**: Where to save flagged comments
+- **Database file**: SQLite database filename
 
-## 🔧 Customization
+## 🔧 Key Features
 
-### Adding New Keywords
+### SQLite Database
 
-```python
-# In config.py
-KEYWORDS = ["pesticide", "glyphosate", "worker safety", "your_new_keyword"]
-```
+- **Reliable storage**: ACID compliance and data integrity
+- **Fast queries**: Indexed lookups for efficient searching
+- **No duplicates**: Primary key constraints prevent duplicate entries
+- **Rich metadata**: Stores full comment details and timestamps
 
-### Custom Alert Format
+### Duplicate Prevention
 
-```python
-# Extend the Notifier class in notifier.py
-class CustomNotifier(Notifier):
-    def send_alert(self, comments):
-        # Your custom alert logic
-        pass
-```
+The system tracks previously seen comment IDs to avoid processing the same comment multiple times.
 
-### Different Storage Backend
+### Two-Stage Filtering
 
-```python
-# Extend the DataStorage class in data_storage.py
-class DatabaseStorage(DataStorage):
-    def save_flagged_comments(self, comments):
-        # Save to database instead of JSON
-        pass
-```
+1. **Metadata scan**: Quick scan of titles and snippets
+2. **Full text verification**: Double-check with complete comment content
+
+### Advanced Querying
+
+- Search by keyword
+- Filter by date range
+- Get statistics and analytics
+- Export data to JSON
+
+### Detailed Logging
+
+- Shows each comment being processed
+- Displays titles and IDs
+- Tracks progress through each step
+- Provides summary statistics
+
+## 📊 Database Utilities
+
+The `db_utils.py` script provides command-line tools for:
+
+- **Statistics**: View database metrics and keyword counts
+- **Searching**: Find comments by keyword or date range
+- **Exporting**: Convert database data to JSON format
+- **Management**: Clear database or view recent entries
 
 ## 📊 Output
 
@@ -112,14 +187,22 @@ The application provides:
 - Real-time alerts for keyword matches
 - Detailed comment information (title, date, submitter, etc.)
 - Summary statistics
-- Persistent storage of flagged comments
+- Persistent SQLite storage with query capabilities
+- Duplicate prevention with seen IDs tracking
+- Export functionality for data analysis
 
 ## 🧪 Testing
 
-Run the example script to see different configurations:
+Run the main script to see the monitoring in action:
 
 ```bash
-python example_usage.py
+python main.py
+```
+
+Check database status:
+
+```bash
+python db_utils.py stats
 ```
 
 ## 📝 License
