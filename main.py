@@ -98,6 +98,8 @@ def run_monitoring_cycle(since_date: str = None, page_size: int = None) -> Dict:
 
     # Step 4: Send alerts
     print(f"\n🚨 STEP 4: Processing alerts...")
+
+    # TODO: Refactor this adn savef to module
     send_alerts(relevant_comments)
 
     # Step 5: Save results
